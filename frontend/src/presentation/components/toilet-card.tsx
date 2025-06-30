@@ -1,8 +1,8 @@
 import React from "react";
-import { Toilet, ToiletType } from "@/domain/entities/toilet";
+import { Toilet, ToiletType, NearbyPlace } from "@/domain/entities/toilet";
 
 interface ToiletCardProps {
-    toilet: Toilet;
+    toilet: Toilet & { distance?: number; nearbyPlaces?: NearbyPlace[] };
     onLocationClick: () => void;
 }
 
@@ -39,6 +39,42 @@ const ToiletCard: React.FC<ToiletCardProps> = ({ toilet, onLocationClick }) => {
             return `${(distance / 1000).toFixed(1)}km`;
         }
         return `${distance}m`;
+    };
+
+    const getPlaceTypeInKorean = (types: string[]): string => {
+        const typeMap: { [key: string]: string } = {
+            convenience_store: "편의점",
+            gas_station: "주유소",
+            restaurant: "음식점",
+            cafe: "카페",
+            bank: "은행",
+            atm: "ATM",
+            pharmacy: "약국",
+            hospital: "병원",
+            subway_station: "지하철역",
+            bus_station: "버스정류장",
+            school: "학교",
+            university: "대학교",
+            shopping_mall: "쇼핑몰",
+            supermarket: "마트",
+            department_store: "백화점",
+            hotel: "호텔",
+            tourist_attraction: "관광지",
+            park: "공원",
+            gym: "헬스장",
+            beauty_salon: "미용실",
+            laundry: "세탁소",
+            store: "상점",
+            establishment: "시설",
+        };
+
+        for (const type of types) {
+            if (typeMap[type]) {
+                return typeMap[type];
+            }
+        }
+
+        return "시설";
     };
 
     return (
@@ -92,6 +128,50 @@ const ToiletCard: React.FC<ToiletCardProps> = ({ toilet, onLocationClick }) => {
                             <span className="info-text">
                                 {toilet.operatingHours}
                             </span>
+                        </div>
+                    )}
+
+                    {/* 주변 장소 정보 표시 */}
+                    {toilet.nearbyPlaces && toilet.nearbyPlaces.length > 0 && (
+                        <div className="info-item nearby-places">
+                            <span className="info-icon">🏪</span>
+                            <div className="nearby-places-content">
+                                <span className="nearby-places-title">
+                                    주변 장소:
+                                </span>
+                                <div className="nearby-places-list">
+                                    {toilet.nearbyPlaces
+                                        .slice(0, 2)
+                                        .map((place, index) => (
+                                            <span
+                                                key={index}
+                                                className="nearby-place-item"
+                                            >
+                                                <span className="place-name">
+                                                    {place.name}
+                                                </span>
+                                                <span className="place-type">
+                                                    (
+                                                    {getPlaceTypeInKorean(
+                                                        place.types
+                                                    )}
+                                                    )
+                                                </span>
+                                                {place.distance < 20 && (
+                                                    <span className="place-distance">
+                                                        - {place.distance}m
+                                                    </span>
+                                                )}
+                                            </span>
+                                        ))}
+                                    {toilet.nearbyPlaces.length > 2 && (
+                                        <span className="more-places">
+                                            외 {toilet.nearbyPlaces.length - 2}
+                                            곳
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>

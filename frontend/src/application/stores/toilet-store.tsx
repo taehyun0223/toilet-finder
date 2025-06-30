@@ -1,20 +1,20 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { Toilet, Location } from "@/domain/entities/toilet";
+import { Toilet, Location, ToiletWithDistance } from "@/domain/entities/toilet";
 
 interface ToiletState {
-    toilets: Toilet[];
+    toilets: ToiletWithDistance[];
     currentLocation: Location | null;
     isLoading: boolean;
     error: string | null;
-    selectedToilet: Toilet | null;
+    selectedToilet: ToiletWithDistance | null;
 }
 
 interface ToiletActions {
-    setToilets: (toilets: Toilet[]) => void;
+    setToilets: (toilets: ToiletWithDistance[]) => void;
     setCurrentLocation: (location: Location) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
-    setSelectedToilet: (toilet: Toilet | null) => void;
+    setSelectedToilet: (toilet: ToiletWithDistance | null) => void;
     clearToilets: () => void;
 }
 
@@ -27,13 +27,14 @@ interface ToiletProviderProps {
 }
 
 export const ToiletProvider: React.FC<ToiletProviderProps> = ({ children }) => {
-    const [toilets, setToilets] = useState<Toilet[]>([]);
+    const [toilets, setToilets] = useState<ToiletWithDistance[]>([]);
     const [currentLocation, setCurrentLocation] = useState<Location | null>(
         null
     );
     const [isLoading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [selectedToilet, setSelectedToilet] = useState<Toilet | null>(null);
+    const [selectedToilet, setSelectedToilet] =
+        useState<ToiletWithDistance | null>(null);
 
     const clearToilets = () => {
         setToilets([]);

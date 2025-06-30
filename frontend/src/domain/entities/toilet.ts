@@ -7,7 +7,29 @@ export interface Toilet {
     type: ToiletType;
     accessibility: boolean;
     operatingHours?: string;
-    distance?: number; // 사용자 위치로부터의 거리 (미터)
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+// 주변 장소 정보 인터페이스 추가
+export interface NearbyPlace {
+    name: string;
+    types: string[];
+    distance: number; // 미터 단위
+    placeId?: string;
+    rating?: number;
+    vicinity?: string;
+    koreanType?: string; // 한국어 장소 타입
+}
+
+// 화장실에 주변 장소 정보 추가
+export interface ToiletWithNearbyPlaces extends Toilet {
+    nearbyPlaces?: NearbyPlace[];
+}
+
+export interface ToiletWithDistance extends Toilet {
+    distance: number;
+    nearbyPlaces?: NearbyPlace[];
 }
 
 export enum ToiletType {

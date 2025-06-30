@@ -1444,3 +1444,214 @@ header .nav-links a.active {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* 주변 장소 정보 스타일 */
+.nearby-places {
+    margin-top: 8px;
+}
+
+.nearby-places-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.nearby-places-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 4px;
+}
+
+.nearby-places-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nearby-place-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: #718096;
+    padding: 2px 0;
+}
+
+.place-name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.place-type {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.place-distance {
+    font-size: 0.7rem;
+    color: #38a169;
+    font-weight: 500;
+}
+
+.more-places {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    font-style: italic;
+    margin-top: 2px;
+}
+
+/* 지도 InfoWindow 내 주변 장소 스타일 */
+.nearby-places-info {
+    margin-top: 10px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 8px;
+}
+
+.nearby-places-list-info {
+    list-style: none;
+    padding: 0;
+    margin: 5px 0 0 0;
+    font-size: 12px;
+}
+
+.nearby-place-info-item {
+    margin-bottom: 3px;
+    color: #4a5568;
+}
+
+.place-name-info {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.place-type-info {
+    color: #a0aec0;
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+.place-distance-info {
+    color: #38a169;
+    font-size: 10px;
+    margin-left: 4px;
+    font-weight: 500;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+    .nearby-places-content {
+        gap: 2px;
+    }
+
+    .nearby-place-item {
+        font-size: 0.75rem;
+        gap: 3px;
+    }
+
+    .place-name {
+        font-size: 0.75rem;
+    }
+
+    .place-type {
+        font-size: 0.7rem;
+    }
+
+    .place-distance {
+        font-size: 0.65rem;
+    }
+}
+
+/* 지도 마커 범례 스타일 */
+.map-legend {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.legend-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.legend-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: #4a5568;
+}
+
+.legend-marker {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* 각 마커 타입별 색상 */
+.legend-marker.current-location {
+    background-color: #00bfff; /* 밝은 청록색 */
+}
+
+.legend-marker.search-location {
+    background-color: #9c27b0; /* 보라색 */
+    border-radius: 0;
+    transform: rotate(45deg);
+    width: 10px;
+    height: 10px;
+}
+
+.legend-marker.public-toilet {
+    background-color: #1976d2; /* 진한 파란색 */
+}
+
+.legend-marker.private-toilet {
+    background-color: #ff9800; /* 주황색 */
+}
+
+.legend-marker.commercial-toilet {
+    background-color: #388e3c; /* 진한 초록색 */
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .legend-items {
+        gap: 8px;
+    }
+
+    .legend-item {
+        font-size: 0.75rem;
+        gap: 4px;
+    }
+
+    .legend-marker {
+        width: 10px;
+        height: 10px;
+    }
+
+    .legend-marker.search-location {
+        width: 8px;
+        height: 8px;
+    }
+
+    .map-legend {
+        padding: 8px;
+        margin-top: 8px;
+    }
+}

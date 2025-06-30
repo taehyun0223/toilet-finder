@@ -7,7 +7,12 @@ import {
 } from "@react-google-maps/api";
 import { useToiletStore } from "@/application/stores/toilet-store";
 import { findNearbyToiletsUseCase } from "@/config/dependency-injection";
-import { Location, Toilet, ToiletType } from "@/domain/entities/toilet";
+import {
+    Location,
+    Toilet,
+    ToiletType,
+    ToiletWithDistance,
+} from "@/domain/entities/toilet";
 import SearchControls, {
     SearchMode,
 } from "@/presentation/components/search-controls";
@@ -215,11 +220,11 @@ const ToiletMapPage: React.FC = () => {
     const getToiletTypeColor = (type: ToiletType) => {
         switch (type) {
             case ToiletType.PUBLIC:
-                return "#4285F4"; // 구글 블루
+                return "#1976D2"; // 진한 파란색 (공공시설)
             case ToiletType.PRIVATE:
-                return "#34A853"; // 구글 그린
+                return "#FF9800"; // 주황색 (사설시설)
             case ToiletType.COMMERCIAL:
-                return "#EA4335"; // 구글 레드
+                return "#388E3C"; // 진한 초록색 (상업시설)
             default:
                 return "#6C757D"; // 회색
         }
@@ -231,20 +236,20 @@ const ToiletMapPage: React.FC = () => {
             return undefined;
         }
 
-        const color = isSelected ? "#FF0000" : getToiletTypeColor(toilet.type);
-        const scale = isSelected ? 1.5 : 1.2;
+        const color = isSelected ? "#E91E63" : getToiletTypeColor(toilet.type); // 핫핑크로 선택된 화장실 표시
+        const scale = isSelected ? 1.8 : 1.4; // 크기 증가
 
         return {
             path: google.maps.SymbolPath.CIRCLE,
             fillColor: color,
-            fillOpacity: 0.8,
+            fillOpacity: 0.9, // 투명도 증가로 더 선명하게
             strokeColor: "#FFFFFF",
-            strokeWeight: 2,
+            strokeWeight: 3, // 테두리 두께 증가
             scale: scale * 8,
         };
     };
 
-    const handleMarkerClick = (toilet: Toilet) => {
+    const handleMarkerClick = (toilet: ToiletWithDistance) => {
         setSelectedToiletId(toilet.id === selectedToiletId ? null : toilet.id);
     };
 
@@ -305,11 +310,11 @@ const ToiletMapPage: React.FC = () => {
                                         }}
                                         icon={{
                                             path: google.maps.SymbolPath.CIRCLE,
-                                            fillColor: "#4285F4",
+                                            fillColor: "#00BFFF", // 밝은 청록색 (현재 위치)
                                             fillOpacity: 1,
                                             strokeColor: "#FFFFFF",
                                             strokeWeight: 3,
-                                            scale: 10,
+                                            scale: 12, // 크기도 약간 키움
                                         }}
                                         title="현재 위치"
                                     />
@@ -327,11 +332,11 @@ const ToiletMapPage: React.FC = () => {
                                         icon={{
                                             path: google.maps.SymbolPath
                                                 .FORWARD_CLOSED_ARROW,
-                                            fillColor: "#EA4335",
+                                            fillColor: "#9C27B0", // 보라색 (검색 위치)
                                             fillOpacity: 1,
                                             strokeColor: "#FFFFFF",
                                             strokeWeight: 2,
-                                            scale: 8,
+                                            scale: 9, // 크기도 약간 키움
                                         }}
                                         title={`검색 위치: ${searchAddress}`}
                                     />
@@ -389,6 +394,62 @@ const ToiletMapPage: React.FC = () => {
                                                             }
                                                         </p>
                                                     )}
+                                                    {toilet.nearbyPlaces &&
+                                                        toilet.nearbyPlaces
+                                                            .length > 0 && (
+                                                            <div className="nearby-places-info">
+                                                                <p>
+                                                                    <strong>
+                                                                        🏪 주변
+                                                                        장소:
+                                                                    </strong>
+                                                                </p>
+                                                                <ul className="nearby-places-list-info">
+                                                                    {toilet.nearbyPlaces
+                                                                        .slice(
+                                                                            0,
+                                                                            3
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                place,
+                                                                                index
+                                                                            ) => (
+                                                                                <li
+                                                                                    key={
+                                                                                        index
+                                                                                    }
+                                                                                    className="nearby-place-info-item"
+                                                                                >
+                                                                                    <span className="place-name-info">
+                                                                                        {
+                                                                                            place.name
+                                                                                        }
+                                                                                    </span>
+                                                                                    <span className="place-type-info">
+                                                                                        (
+                                                                                        {place.koreanType ||
+                                                                                            "시설"}
+
+                                                                                        )
+                                                                                    </span>
+                                                                                    {place.distance <
+                                                                                        30 && (
+                                                                                        <span className="place-distance-info">
+                                                                                            -{" "}
+                                                                                            {
+                                                                                                place.distance
+                                                                                            }
+
+                                                                                            m
+                                                                                        </span>
+                                                                                    )}
+                                                                                </li>
+                                                                            )
+                                                                        )}
+                                                                </ul>
+                                                            </div>
+                                                        )}
                                                 </div>
                                             </InfoWindow>
                                         )}
@@ -397,6 +458,33 @@ const ToiletMapPage: React.FC = () => {
                             })}
                         </GoogleMap>
                     </LoadScript>
+
+                    {/* 지도 마커 범례 */}
+                    <div className="map-legend">
+                        <div className="legend-title">🗺️ 지도 범례</div>
+                        <div className="legend-items">
+                            <div className="legend-item">
+                                <div className="legend-marker current-location"></div>
+                                <span>현재 위치</span>
+                            </div>
+                            <div className="legend-item">
+                                <div className="legend-marker search-location"></div>
+                                <span>검색 위치</span>
+                            </div>
+                            <div className="legend-item">
+                                <div className="legend-marker public-toilet"></div>
+                                <span>공공 화장실</span>
+                            </div>
+                            <div className="legend-item">
+                                <div className="legend-marker private-toilet"></div>
+                                <span>사설 화장실</span>
+                            </div>
+                            <div className="legend-item">
+                                <div className="legend-marker commercial-toilet"></div>
+                                <span>상업 화장실</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="toilets-list">
