@@ -107,7 +107,117 @@ const ToiletMapPage: React.FC = () => {
         mapRef.current = map;
         placesService.current = new google.maps.places.PlacesService(map);
         console.log("✅ Google Maps 로드 완료");
+
+        // Places API 테스트
+        testPlacesAPI(map);
     }, []);
+
+    // Places API 테스트 함수
+    const testPlacesAPI = (map: google.maps.Map) => {
+        console.log("🧪 Places API 테스트 시작");
+        console.log(
+            "🔑 사용 중인 API 키:",
+            GOOGLE_MAPS_API_KEY.substring(0, 20) + "..."
+        );
+
+        if (!window.google?.maps?.places?.PlacesService) {
+            console.error("❌ Places API가 로드되지 않았습니다.");
+            console.log("💡 해결책:");
+            console.log("1. Google Cloud Console에서 Places API 활성화");
+            console.log("2. API 키에 Places API 권한 추가");
+            console.log("3. Places Library가 로드 설정에 포함되어 있는지 확인");
+            return;
+        }
+
+        console.log("✅ Places Library 로드됨");
+        const service = new google.maps.places.PlacesService(map);
+
+        // 서울 시청 근처에서 테스트
+        const request: google.maps.places.PlaceSearchRequest = {
+            location: { lat: 37.5665, lng: 126.978 },
+            radius: 100,
+            type: "establishment",
+        };
+
+        console.log("📡 Places API 요청:", request);
+
+        service.nearbySearch(request, (results, status) => {
+            console.log("📡 Places API 응답 상태:", status);
+            console.log("📡 Places API 응답 결과:", results);
+
+            if (
+                status === google.maps.places.PlacesServiceStatus.OK &&
+                results
+            ) {
+                console.log(
+                    "✅ Places API 테스트 성공! 찾은 장소 개수:",
+                    results.length
+                );
+                console.log("📍 첫 번째 장소:", results[0]?.name);
+
+                // 화장실 검색 재시작
+                if (currentLocation) {
+                    console.log("🔄 화장실 검색에 주변 장소 정보 추가 재시도");
+                    searchNearbyToilets(currentLocation, radius);
+                }
+            } else {
+                console.error("❌ Places API 테스트 실패:", status);
+
+                // 상세한 오류 진단
+                switch (status) {
+                    case google.maps.places.PlacesServiceStatus.ZERO_RESULTS:
+                        console.log(
+                            "검색 결과가 없습니다. (정상 - 해당 지역에 장소가 없음)"
+                        );
+                        break;
+                    case google.maps.places.PlacesServiceStatus
+                        .OVER_QUERY_LIMIT:
+                        console.error("❌ API 쿼리 한도 초과");
+                        console.log(
+                            "💡 해결책: Google Cloud Console에서 할당량 확인"
+                        );
+                        break;
+                    case google.maps.places.PlacesServiceStatus.REQUEST_DENIED:
+                        console.error(
+                            "❌ API 요청이 거부됨 - API 키 또는 권한 문제"
+                        );
+                        console.log("💡 해결책:");
+                        console.log(
+                            "1. Google Cloud Console > Credentials에서 API 키 확인"
+                        );
+                        console.log("2. API 키에 Places API 활성화");
+                        console.log(
+                            "3. API 키 제한 설정 확인 (HTTP referrer, IP 주소 등)"
+                        );
+                        break;
+                    case google.maps.places.PlacesServiceStatus.INVALID_REQUEST:
+                        console.error("❌ 잘못된 요청");
+                        console.log("💡 요청 파라미터 확인 필요");
+                        break;
+                    default:
+                        console.error("❌ 알 수 없는 오류:", status);
+                        console.log(
+                            "💡 Google Cloud Console에서 API 상태 확인 필요"
+                        );
+                }
+
+                // 자세한 디버깅 정보
+                console.log("🔧 디버깅 정보:");
+                console.log(
+                    "- API 키:",
+                    GOOGLE_MAPS_API_KEY ? "설정됨" : "설정되지 않음"
+                );
+                console.log(
+                    "- Places Library:",
+                    window.google?.maps?.places ? "로드됨" : "로드되지 않음"
+                );
+                console.log(
+                    "- PlacesService:",
+                    typeof google.maps.places.PlacesService
+                );
+            }
+        });
+    };
 
     const getCurrentLocation = () => {
         console.log("📍 getCurrentLocation 시작");
@@ -185,9 +295,18 @@ const ToiletMapPage: React.FC = () => {
     };
 
     const handleModeChange = (mode: SearchMode) => {
+        console.log("🔄 검색 모드 변경됨:", mode);
+        console.log("📍 이전 모드:", searchMode);
+
         setSearchMode(mode);
         setError(null);
         setToilets([]);
+
+        if (mode === "current") {
+            console.log("📍 현재 위치 모드로 변경 - GPS 위치 요청 시작");
+        } else {
+            console.log("🔍 주소 검색 모드로 변경");
+        }
     };
 
     const handleRadiusChange = (newRadius: number) => {
@@ -200,9 +319,22 @@ const ToiletMapPage: React.FC = () => {
     };
 
     const handleAddressSearch = (location: Location, address: string) => {
+        console.log("🗺️ handleAddressSearch 호출됨!");
+        console.log("📍 받은 위치:", location);
+        console.log("🏠 받은 주소:", address);
+        console.log("🔄 현재 상태:", {
+            searchMode,
+            radius,
+            isLoading,
+            currentLocation,
+            searchLocation,
+        });
+
         setSearchLocation(location);
         setSearchAddress(address);
         setMapCenter({ lat: location.latitude, lng: location.longitude });
+
+        console.log("🔍 화장실 검색 시작...");
         searchNearbyToilets(location, radius);
     };
 

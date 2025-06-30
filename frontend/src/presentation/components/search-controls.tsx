@@ -38,16 +38,44 @@ const SearchControls: React.FC<SearchControlsProps> = ({
 
     // Google Maps API 로드 확인 및 서비스 초기화
     useEffect(() => {
+        console.log("🔄 SearchControls useEffect 실행");
+        console.log("🗺️ Google Maps API 상태 체크:", {
+            google: !!window.google,
+            maps: !!window.google?.maps,
+            places: !!window.google?.maps?.places,
+            Geocoder: !!window.google?.maps?.Geocoder,
+        });
+
+        // Geocoder는 기본 Maps API에 포함되어 있으므로 따로 초기화
+        if (
+            window.google &&
+            window.google.maps &&
+            window.google.maps.Geocoder
+        ) {
+            console.log("✅ Geocoder 초기화 중...");
+            geocoderService.current = new google.maps.Geocoder();
+            console.log(
+                "✅ geocoderService 초기화 완료:",
+                !!geocoderService.current
+            );
+        } else {
+            console.error("❌ Geocoder 초기화 실패 - Maps API 미로드");
+        }
+
+        // Places API 관련 서비스는 places가 있을 때만 초기화
         if (window.google && window.google.maps && window.google.maps.places) {
+            console.log("✅ Places API 서비스들 초기화 중...");
             autocompleteService.current =
                 new google.maps.places.AutocompleteService();
-            geocoderService.current = new google.maps.Geocoder();
 
             // PlacesService는 지도가 필요하므로 임시 div 생성
             const tempDiv = document.createElement("div");
             placesService.current = new google.maps.places.PlacesService(
                 tempDiv
             );
+            console.log("✅ Places API 서비스들 초기화 완료");
+        } else {
+            console.warn("⚠️ Places API 미로드 - 자동완성 기능 제한됨");
         }
     }, []);
 
@@ -125,27 +153,83 @@ const SearchControls: React.FC<SearchControlsProps> = ({
 
     // 텍스트 주소로 검색 (Geocoding API 사용)
     const handleAddressSearch = async () => {
-        if (!address.trim() || !geocoderService.current) return;
+        console.log("🔍 검색 버튼 클릭됨!");
+        console.log("📍 입력된 주소:", address);
+        console.log(
+            "🗺️ geocoderService 상태:",
+            geocoderService.current ? "준비됨" : "없음"
+        );
+        console.log("🔑 API 키:", GOOGLE_MAPS_API_KEY.substring(0, 20) + "...");
+
+        if (!address.trim()) {
+            console.warn("⚠️ 주소가 입력되지 않음");
+            alert("주소를 입력해주세요.");
+            return;
+        }
+
+        // geocoderService가 없다면 지금 초기화 시도
+        if (!geocoderService.current) {
+            console.log("🔄 geocoderService 재초기화 시도...");
+            console.log("💡 Google Maps API 로드 상태:", {
+                google: !!window.google,
+                maps: !!window.google?.maps,
+                Geocoder: !!window.google?.maps?.Geocoder,
+            });
+
+            if (
+                window.google &&
+                window.google.maps &&
+                window.google.maps.Geocoder
+            ) {
+                console.log("✅ 지금 Geocoder 초기화 중...");
+                geocoderService.current = new google.maps.Geocoder();
+                console.log(
+                    "✅ geocoderService 재초기화 완료:",
+                    !!geocoderService.current
+                );
+            } else {
+                console.error("❌ Google Maps API가 여전히 로드되지 않음");
+                alert(
+                    "Google Maps API가 로드되지 않았습니다. 페이지를 새로고침 해보세요."
+                );
+                return;
+            }
+        }
 
         setIsSearching(true);
+        console.log("🔍 검색 시작...");
+
         try {
             const request = {
                 address: address,
                 componentRestrictions: { country: "JP" }, // 주로 일본 검색
             };
 
+            console.log("📡 Geocoding API 요청:", request);
+
             geocoderService.current.geocode(request, (results, status) => {
+                console.log("📡 Geocoding API 응답 상태:", status);
+                console.log("📡 Geocoding API 응답 결과:", results);
+
                 if (
                     status === google.maps.GeocoderStatus.OK &&
                     results &&
                     results[0]
                 ) {
+                    console.log("✅ 주소 검색 성공!");
                     const location: Location = {
                         latitude: results[0].geometry.location.lat(),
                         longitude: results[0].geometry.location.lng(),
                     };
+                    console.log("📍 찾은 위치:", location);
+                    console.log(
+                        "🏠 포맷된 주소:",
+                        results[0].formatted_address
+                    );
+
                     onAddressSearch(location, results[0].formatted_address);
                 } else {
+                    console.error("❌ 주소 검색 실패:", status);
                     alert(
                         "주소를 찾을 수 없습니다. 아래 빠른 검색 버튼을 이용해보세요."
                     );
@@ -153,7 +237,7 @@ const SearchControls: React.FC<SearchControlsProps> = ({
                 setIsSearching(false);
             });
         } catch (error) {
-            console.error("주소 검색 실패:", error);
+            console.error("❌ 주소 검색 중 예외 발생:", error);
             alert("주소 검색 중 오류가 발생했습니다.");
             setIsSearching(false);
         }
@@ -165,11 +249,13 @@ const SearchControls: React.FC<SearchControlsProps> = ({
         name: string;
         address: string;
     }) => {
-        console.log("⚡ 빠른 검색:", location);
+        console.log("⚡ 빠른 검색 버튼 클릭됨:", location);
         const searchLocation: Location = {
             latitude: location.lat,
             longitude: location.lng,
         };
+        console.log("📍 검색 위치로 변환:", searchLocation);
+        console.log("🔄 onAddressSearch 호출 중...");
         onAddressSearch(searchLocation, location.address);
     };
 
