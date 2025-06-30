@@ -7,6 +7,8 @@ import dotenv from "dotenv";
 
 import { createDependencies } from "@/config/dependency-injection";
 import { createToiletRoutes } from "@/interfaces/routes/toilet-routes";
+import { createTokyoSyncRoutes } from "@/interfaces/routes/tokyo-sync-routes";
+import { createOverpassSyncRoutes } from "@/interfaces/routes/overpass-sync-routes";
 
 dotenv.config();
 
@@ -31,6 +33,14 @@ const dependencies = createDependencies();
 
 // Routes
 app.use("/api/toilets", createToiletRoutes(dependencies.toiletController));
+app.use(
+    "/api/tokyo-sync",
+    createTokyoSyncRoutes(dependencies.tokyoSyncController)
+);
+app.use(
+    "/api/overpass-sync",
+    createOverpassSyncRoutes(dependencies.overpassSyncController)
+);
 
 // Health check
 app.get("/health", (req, res) => {
@@ -40,6 +50,30 @@ app.get("/health", (req, res) => {
         uptime: process.uptime(),
     });
 });
+
+// 자동 동기화 스케줄러 (Overpass API 사용)
+if (process.env.ENABLE_AUTO_SYNC === "true") {
+    console.log("⏰ Overpass 데이터 자동 동기화 스케줄러 활성화");
+
+    // 첫 동기화 (서버 시작 후 2분 뒤) - Overpass API 부하 고려
+    setTimeout(async () => {
+        try {
+            console.log("🚀 초기 Overpass 데이터 동기화 시작");
+            await dependencies.overpassDataSyncUseCase.scheduleSync();
+        } catch (error) {
+            console.error("❌ 초기 Overpass 동기화 실패:", error);
+        }
+    }, 120000); // 2분
+
+    // 정기 동기화 (매 24시간마다)
+    setInterval(async () => {
+        try {
+            await dependencies.overpassDataSyncUseCase.scheduleSync();
+        } catch (error) {
+            console.error("❌ 정기 Overpass 동기화 실패:", error);
+        }
+    }, 24 * 60 * 60 * 1000); // 24시간
+}
 
 // Error handling middleware
 app.use(
@@ -76,6 +110,12 @@ const server = app.listen(PORT, () => {
     console.log(`📋 Health check: http://localhost:${PORT}/health`);
     console.log(
         `🗺️  API Endpoint: http://localhost:${PORT}/api/toilets/nearby`
+    );
+    console.log(
+        `🌍 Overpass Sync API: http://localhost:${PORT}/api/overpass-sync/info`
+    );
+    console.log(
+        `🔄 Tokyo Sync API: http://localhost:${PORT}/api/tokyo-sync/info (레거시)`
     );
 });
 

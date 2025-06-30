@@ -16,31 +16,23 @@ export class ToiletPostgresRepository implements ToiletRepository {
         radiusInMeters: number
     ): Promise<ToiletWithDistance[]> {
         const query = `
-      SELECT 
-        id, name, latitude, longitude, address, type, accessibility, operating_hours,
-        created_at, updated_at,
-        (
-          6371000 * acos(
-            cos(radians($1)) * cos(radians(latitude)) *
-            cos(radians(longitude) - radians($2)) +
-            sin(radians($1)) * sin(radians(latitude))
-          )
-        ) as distance
-      FROM toilets
-      WHERE (
-        6371000 * acos(
-          cos(radians($1)) * cos(radians(latitude)) *
-          cos(radians(longitude) - radians($2)) +
-          sin(radians($1)) * sin(radians(latitude))
-        )
-      ) <= $3
-      ORDER BY distance
-    `;
+            SELECT *,
+                   ST_DistanceSphere(
+                       ST_MakePoint(longitude, latitude),
+                       ST_MakePoint($1, $2)
+                   ) as distance
+            FROM toilets
+            WHERE ST_DistanceSphere(
+                ST_MakePoint(longitude, latitude),
+                ST_MakePoint($1, $2)
+            ) <= $3
+            ORDER BY distance
+        `;
 
         try {
             const result = await this.pool.query(query, [
-                location.latitude,
                 location.longitude,
+                location.latitude,
                 radiusInMeters,
             ]);
 
@@ -50,15 +42,16 @@ export class ToiletPostgresRepository implements ToiletRepository {
                 latitude: parseFloat(row.latitude),
                 longitude: parseFloat(row.longitude),
                 address: row.address,
-                type: row.type as ToiletType,
+                type: row.type,
                 accessibility: row.accessibility,
                 operatingHours: row.operating_hours,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
-                distance: Math.round(parseFloat(row.distance)),
+                createdAt: new Date(row.created_at),
+                updatedAt: new Date(row.updated_at),
+                distance: parseFloat(row.distance),
             }));
         } catch (error) {
-            throw new Error(`주변 화장실 검색 실패: ${error}`);
+            console.error("화장실 검색 실패:", error);
+            throw new Error("화장실 검색 중 오류가 발생했습니다.");
         }
     }
 
@@ -67,6 +60,7 @@ export class ToiletPostgresRepository implements ToiletRepository {
 
         try {
             const result = await this.pool.query(query, [id]);
+
             if (result.rows.length === 0) {
                 return null;
             }
@@ -78,23 +72,35 @@ export class ToiletPostgresRepository implements ToiletRepository {
                 latitude: parseFloat(row.latitude),
                 longitude: parseFloat(row.longitude),
                 address: row.address,
-                type: row.type as ToiletType,
+                type: row.type,
                 accessibility: row.accessibility,
                 operatingHours: row.operating_hours,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
+                createdAt: new Date(row.created_at),
+                updatedAt: new Date(row.updated_at),
             };
         } catch (error) {
-            throw new Error(`화장실 조회 실패: ${error}`);
+            console.error("화장실 조회 실패:", error);
+            return null;
         }
     }
 
     async save(toilet: Toilet): Promise<Toilet> {
         const query = `
-      INSERT INTO toilets (id, name, latitude, longitude, address, type, accessibility, operating_hours)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `;
+            INSERT INTO toilets (
+                id, name, latitude, longitude, address, type,
+                accessibility, operating_hours, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (id) DO UPDATE SET
+                name = EXCLUDED.name,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                address = EXCLUDED.address,
+                type = EXCLUDED.type,
+                accessibility = EXCLUDED.accessibility,
+                operating_hours = EXCLUDED.operating_hours,
+                updated_at = EXCLUDED.updated_at
+            RETURNING *
+        `;
 
         try {
             const result = await this.pool.query(query, [
@@ -106,6 +112,8 @@ export class ToiletPostgresRepository implements ToiletRepository {
                 toilet.type,
                 toilet.accessibility,
                 toilet.operatingHours,
+                toilet.createdAt,
+                toilet.updatedAt,
             ]);
 
             const row = result.rows[0];
@@ -115,68 +123,57 @@ export class ToiletPostgresRepository implements ToiletRepository {
                 latitude: parseFloat(row.latitude),
                 longitude: parseFloat(row.longitude),
                 address: row.address,
-                type: row.type as ToiletType,
+                type: row.type,
                 accessibility: row.accessibility,
                 operatingHours: row.operating_hours,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
+                createdAt: new Date(row.created_at),
+                updatedAt: new Date(row.updated_at),
             };
         } catch (error) {
-            throw new Error(`화장실 저장 실패: ${error}`);
+            console.error("화장실 저장 실패:", error);
+            throw new Error("화장실 저장 중 오류가 발생했습니다.");
         }
     }
 
     async update(id: string, toilet: Partial<Toilet>): Promise<Toilet | null> {
-        const fields: string[] = [];
-        const values: any[] = [];
-        let paramCount = 1;
+        const fields = [];
+        const values = [];
+        let parameterIndex = 1;
 
-        if (toilet.name !== undefined) {
-            fields.push(`name = $${paramCount++}`);
-            values.push(toilet.name);
-        }
-        if (toilet.latitude !== undefined) {
-            fields.push(`latitude = $${paramCount++}`);
-            values.push(toilet.latitude);
-        }
-        if (toilet.longitude !== undefined) {
-            fields.push(`longitude = $${paramCount++}`);
-            values.push(toilet.longitude);
-        }
-        if (toilet.address !== undefined) {
-            fields.push(`address = $${paramCount++}`);
-            values.push(toilet.address);
-        }
-        if (toilet.type !== undefined) {
-            fields.push(`type = $${paramCount++}`);
-            values.push(toilet.type);
-        }
-        if (toilet.accessibility !== undefined) {
-            fields.push(`accessibility = $${paramCount++}`);
-            values.push(toilet.accessibility);
-        }
-        if (toilet.operatingHours !== undefined) {
-            fields.push(`operating_hours = $${paramCount++}`);
-            values.push(toilet.operatingHours);
+        for (const [key, value] of Object.entries(toilet)) {
+            if (value !== undefined) {
+                const columnName =
+                    key === "operatingHours"
+                        ? "operating_hours"
+                        : key === "createdAt"
+                        ? "created_at"
+                        : key === "updatedAt"
+                        ? "updated_at"
+                        : key;
+                fields.push(`${columnName} = $${parameterIndex}`);
+                values.push(value);
+                parameterIndex++;
+            }
         }
 
         if (fields.length === 0) {
-            return this.findById(id);
+            return await this.findById(id);
         }
 
-        fields.push(`updated_at = $${paramCount++}`);
+        fields.push(`updated_at = $${parameterIndex}`);
         values.push(new Date());
         values.push(id);
 
         const query = `
-      UPDATE toilets 
-      SET ${fields.join(", ")}
-      WHERE id = $${paramCount}
-      RETURNING *
-    `;
+            UPDATE toilets 
+            SET ${fields.join(", ")} 
+            WHERE id = $${parameterIndex + 1}
+            RETURNING *
+        `;
 
         try {
             const result = await this.pool.query(query, values);
+
             if (result.rows.length === 0) {
                 return null;
             }
@@ -188,14 +185,15 @@ export class ToiletPostgresRepository implements ToiletRepository {
                 latitude: parseFloat(row.latitude),
                 longitude: parseFloat(row.longitude),
                 address: row.address,
-                type: row.type as ToiletType,
+                type: row.type,
                 accessibility: row.accessibility,
                 operatingHours: row.operating_hours,
-                createdAt: row.created_at,
-                updatedAt: row.updated_at,
+                createdAt: new Date(row.created_at),
+                updatedAt: new Date(row.updated_at),
             };
         } catch (error) {
-            throw new Error(`화장실 업데이트 실패: ${error}`);
+            console.error("화장실 업데이트 실패:", error);
+            return null;
         }
     }
 
@@ -204,9 +202,174 @@ export class ToiletPostgresRepository implements ToiletRepository {
 
         try {
             const result = await this.pool.query(query, [id]);
-            return result.rowCount !== null && result.rowCount > 0;
+            return (result.rowCount || 0) > 0;
         } catch (error) {
-            throw new Error(`화장실 삭제 실패: ${error}`);
+            console.error("화장실 삭제 실패:", error);
+            return false;
+        }
+    }
+
+    // 도쿄 API 데이터 대량 저장
+    async saveTokyoToilets(toilets: Toilet[]): Promise<{
+        saved: number;
+        updated: number;
+        failed: number;
+    }> {
+        console.log(
+            `🗄️ 도쿄 화장실 ${toilets.length}개 데이터베이스 저장 시작`
+        );
+
+        let saved = 0;
+        let updated = 0;
+        let failed = 0;
+
+        const client = await this.pool.connect();
+
+        try {
+            await client.query("BEGIN");
+
+            for (const toilet of toilets) {
+                try {
+                    // 기존 데이터 확인
+                    const existingQuery =
+                        "SELECT id, updated_at FROM toilets WHERE id = $1";
+                    const existingResult = await client.query(existingQuery, [
+                        toilet.id,
+                    ]);
+
+                    if (existingResult.rows.length > 0) {
+                        // 업데이트
+                        const updateQuery = `
+                            UPDATE toilets SET
+                                name = $2,
+                                latitude = $3,
+                                longitude = $4,
+                                address = $5,
+                                type = $6,
+                                accessibility = $7,
+                                operating_hours = $8,
+                                updated_at = $9
+                            WHERE id = $1
+                        `;
+
+                        await client.query(updateQuery, [
+                            toilet.id,
+                            toilet.name,
+                            toilet.latitude,
+                            toilet.longitude,
+                            toilet.address,
+                            toilet.type,
+                            toilet.accessibility,
+                            toilet.operatingHours,
+                            new Date(),
+                        ]);
+                        updated++;
+                    } else {
+                        // 새로 삽입
+                        const insertQuery = `
+                            INSERT INTO toilets (
+                                id, name, latitude, longitude, address, type,
+                                accessibility, operating_hours, created_at, updated_at
+                            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        `;
+
+                        await client.query(insertQuery, [
+                            toilet.id,
+                            toilet.name,
+                            toilet.latitude,
+                            toilet.longitude,
+                            toilet.address,
+                            toilet.type,
+                            toilet.accessibility,
+                            toilet.operatingHours,
+                            toilet.createdAt,
+                            toilet.updatedAt,
+                        ]);
+                        saved++;
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ 화장실 ${toilet.id} 저장 실패:`, error);
+                    failed++;
+                }
+            }
+
+            await client.query("COMMIT");
+
+            console.log(
+                `✅ 도쿄 화장실 저장 완료: 신규 ${saved}개, 업데이트 ${updated}개, 실패 ${failed}개`
+            );
+
+            return { saved, updated, failed };
+        } catch (error) {
+            await client.query("ROLLBACK");
+            console.error("❌ 도쿄 화장실 대량 저장 실패:", error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    // 저장된 도쿄 화장실 통계 조회
+    async getTokyoToiletStats(): Promise<{
+        total: number;
+        byType: Record<string, number>;
+        accessible: number;
+        lastUpdated: Date | null;
+    }> {
+        try {
+            const queries = [
+                "SELECT COUNT(*) as total FROM toilets WHERE id LIKE 'tokyo_%'",
+                "SELECT type, COUNT(*) as count FROM toilets WHERE id LIKE 'tokyo_%' GROUP BY type",
+                "SELECT COUNT(*) as accessible FROM toilets WHERE id LIKE 'tokyo_%' AND accessibility = true",
+                "SELECT MAX(updated_at) as last_updated FROM toilets WHERE id LIKE 'tokyo_%'",
+            ];
+
+            const [
+                totalResult,
+                typeResult,
+                accessibleResult,
+                lastUpdatedResult,
+            ] = await Promise.all(
+                queries.map((query) => this.pool.query(query))
+            );
+
+            const byType: Record<string, number> = {};
+            typeResult.rows.forEach((row) => {
+                byType[row.type] = parseInt(row.count);
+            });
+
+            return {
+                total: parseInt(totalResult.rows[0].total),
+                byType,
+                accessible: parseInt(accessibleResult.rows[0].accessible),
+                lastUpdated: lastUpdatedResult.rows[0].last_updated
+                    ? new Date(lastUpdatedResult.rows[0].last_updated)
+                    : null,
+            };
+        } catch (error) {
+            console.error("도쿄 화장실 통계 조회 실패:", error);
+            throw error;
+        }
+    }
+
+    // 오래된 도쿄 데이터 정리
+    async cleanupOldTokyoData(olderThanDays: number = 30): Promise<number> {
+        const query = `
+            DELETE FROM toilets 
+            WHERE id LIKE 'tokyo_%' 
+            AND updated_at < NOW() - INTERVAL '${olderThanDays} days'
+        `;
+
+        try {
+            const result = await this.pool.query(query);
+            const deletedCount = result.rowCount || 0;
+            console.log(
+                `🧹 ${deletedCount}개의 오래된 도쿄 화장실 데이터 정리됨`
+            );
+            return deletedCount;
+        } catch (error) {
+            console.error("도쿄 데이터 정리 실패:", error);
+            throw error;
         }
     }
 }

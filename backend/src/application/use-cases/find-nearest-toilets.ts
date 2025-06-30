@@ -18,7 +18,7 @@ export class FindNearestToilets {
     async execute(
         request: FindNearestToiletsRequest
     ): Promise<FindNearestToiletsResponse> {
-        const { location, radiusInMeters = 1000, limit = 10 } = request;
+        const { location, radiusInMeters = 1000, limit = 50 } = request;
 
         try {
             // 주변 화장실 검색

@@ -1,44 +1,37 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const Header: React.FC = () => {
+    const location = useLocation();
+
     return (
-        <header
-            style={{
-                padding: "1rem",
-                backgroundColor: "#646cff",
-                color: "white",
-            }}
-        >
-            <nav
-                style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                }}
-            >
-                <h1 style={{ margin: 0 }}>
-                    <Link
-                        to="/"
-                        style={{ color: "white", textDecoration: "none" }}
-                    >
-                        🚽 Toilet Finder
-                    </Link>
-                </h1>
-                <div style={{ display: "flex", gap: "1rem" }}>
-                    <Link
-                        to="/"
-                        style={{ color: "white", textDecoration: "none" }}
-                    >
-                        홈
-                    </Link>
-                    <Link
-                        to="/map"
-                        style={{ color: "white", textDecoration: "none" }}
-                    >
-                        지도
-                    </Link>
-                </div>
+        <header>
+            <nav>
+                <Link to="/" className="logo">
+                    🚽 Toilet Finder
+                </Link>
+                <ul className="nav-links">
+                    <li>
+                        <Link
+                            to="/"
+                            className={
+                                location.pathname === "/" ? "active" : ""
+                            }
+                        >
+                            홈
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            to="/map"
+                            className={
+                                location.pathname === "/map" ? "active" : ""
+                            }
+                        >
+                            🗺️ 지도 검색
+                        </Link>
+                    </li>
+                </ul>
             </nav>
         </header>
     );

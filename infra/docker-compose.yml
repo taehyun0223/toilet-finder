@@ -29,17 +29,19 @@ services:
             dockerfile: ../infra/Dockerfile.backend
         container_name: toilet-finder-backend
         environment:
-            NODE_ENV: production
+            NODE_ENV: development
             PORT: 8000
             DB_HOST: postgres
             DB_PORT: 5432
-            DB_NAME: toilet_finder
+            DB_NAME: toiletfinder
             DB_USER: postgres
             DB_PASSWORD: password
             DB_MAX_CONNECTIONS: 20
             DB_IDLE_TIMEOUT: 30000
             DB_CONNECTION_TIMEOUT: 2000
             CORS_ORIGIN: http://localhost:3000
+            USE_TOKYO_API: true
+            ENABLE_AUTO_SYNC: true
         ports:
             - "8000:8000"
         depends_on:
@@ -50,7 +52,7 @@ services:
         volumes:
             - ../backend:/app
             - /app/node_modules
-        command: ["npm", "run", "dev"]
+        command: npm run dev
 
     # Frontend Application
     frontend:

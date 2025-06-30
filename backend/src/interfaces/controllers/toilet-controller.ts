@@ -22,7 +22,7 @@ export class ToiletController {
                 latitude,
                 longitude,
                 radius = 1000,
-                limit = 10,
+                limit = 50,
             } = req.query;
 
             // 입력 값 검증
